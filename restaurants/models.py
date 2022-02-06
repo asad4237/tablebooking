@@ -1,7 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import (
-    BaseUserManager, AbstractBaseUser
+    BaseUserManager, AbstractBaseUser, PermissionsMixin
 )
+from django.core.validators import RegexValidator, MaxValueValidator, MinValueValidator
+
 
 class Restaurant(models.Model):
     name = models.CharField(max_length=250)
@@ -21,7 +23,11 @@ class Table(models.Model):
         Restaurant,
         on_delete=models.CASCADE
     )
-    size = models.IntegerField()
+    size = models.IntegerField(
+        validators=[
+            MaxValueValidator(12),
+            MinValueValidator(1)
+        ])
 
     #class Meta:
      #   app_label = 'tablebooking'
@@ -40,39 +46,39 @@ class Booking(models.Model):
       #  managed = True
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, password=None):
+    def create_user(self, staffnumber, password=None):
         """
         Creates and saves a User with the given email and password.
         """
-        if not email:
-            raise ValueError('Users must have an email address')
+        if not staffnumber:
+            raise ValueError('Users must have a staff number')
 
         user = self.model(
-            email=self.normalize_email(email),
+            staffnumber=staffnumber,
         )
 
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_staffuser(self, email, password):
+    def create_staffuser(self, staffnumber, password):
         """
         Creates and saves a staff user with the given email and password.
         """
         user = self.create_user(
-            email,
+            staffnumber,
             password=password,
         )
         user.staff = True
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, password):
+    def create_superuser(self, staffnumber, password):
         """
         Creates and saves a superuser with the given email and password.
         """
         user = self.create_user(
-            email,
+            staffnumber,
             password=password,
         )
         user.staff = True
@@ -81,49 +87,25 @@ class UserManager(BaseUserManager):
         return user
 
 # hook in the New Manager to our Model
-class User(AbstractBaseUser):
+class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(
         verbose_name='email address',
         max_length=255,
-        unique=True,
+        unique=False,
     )
-    is_active = models.BooleanField(default=True)
-    staff = models.BooleanField(default=False) # a admin user; non super-user
-    admin = models.BooleanField(default=False) # a superuser
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
+    staffnumber = models.CharField(unique=True, max_length=4, validators=[RegexValidator(regex=r'^\d{4}$', message='Staff number Length has to be exactly 4', code='nomatch')])
 
+    objects = UserManager()
     # notice the absence of a "Password field", that is built in.
+    EMAIL_FIELD = None
+    USERNAME_FIELD = 'staffnumber'
+    REQUIRED_FIELDS = [staffnumber] # Email & Password are required by default.
 
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = [] # Email & Password are required by default.
 
-    def get_full_name(self):
-        # The user is identified by their email address
-        return self.email
-
-    def get_short_name(self):
-        # The user is identified by their email address
-        return self.email
 
     def __str__(self):
-        return self.email
+        return self.staffnumber
 
-    def has_perm(self, perm, obj=None):
-        "Does the user have a specific permission?"
-        # Simplest possible answer: Yes, always
-        return True
-
-    def has_module_perms(self, app_label):
-        "Does the user have permissions to view the app `app_label`?"
-        # Simplest possible answer: Yes, always
-        return True
-
-    @property
-    def is_staff(self):
-        "Is the user a member of staff?"
-        return self.staff
-
-    @property
-    def is_admin(self):
-        "Is the user a admin member?"
-        return self.admin
 

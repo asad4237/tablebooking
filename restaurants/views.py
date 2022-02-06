@@ -9,10 +9,10 @@ from restaurants.models import Booking, Restaurant, Table
 from restaurants import booking
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import permissions
+from .permission import IsAdminOrEmployeeUser, IsAdminUser
 
 
 class BookinngViewSet(viewsets.ModelViewSet):
-    permission_classes = (IsAuthenticated,)
     """
     API endpoint that allows booking to be viewed/created/edited/deleted.
     """
@@ -20,6 +20,22 @@ class BookinngViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
     update_data_pk_field = 'id'
 
+    def get_permissions(self):
+        permission_classes = []
+        allowany = True
+        if self.action == 'create':
+            if not allowany:
+                permission_classes = [IsAdminOrEmployeeUser]
+        elif self.action == 'list':
+            if not allowany:
+                permission_classes = [IsAdminOrEmployeeUser]
+        elif self.action == 'retrieve' or self.action == 'update' or self.action == 'partial_update':
+            if not allowany:
+                permission_classes = [IsAdminOrEmployeeUser]
+        elif self.action == 'destroy':
+            if not allowany:
+                permission_classes = [IsAdminOrEmployeeUser]
+        return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
 
@@ -35,11 +51,13 @@ class BookinngViewSet(viewsets.ModelViewSet):
             serializer = BookingSerializer(data=request.data)
             if serializer.is_valid():
                 from datetime import datetime
-                dt = datetime.strptime(serializer['booking_date_time'].value, '%Y-%m-%dT%H:%M:%S%z')
+                booking_date_time_start = datetime.strptime(serializer['booking_date_time_start'].value, '%Y-%m-%dT%H:%M:%S%z')
+                booking_date_time_end = datetime.strptime(serializer['booking_date_time_end'].value, '%Y-%m-%dT%H:%M:%S%z')
 
                 booking_response = booking.book_restaurant_table(
                     restaurant=serializer['restaurant'].value,
-                    booking_date_time=dt,
+                    booking_date_time=booking_date_time_start,
+                    booking_date_time_end=booking_date_time_end,
                     people=serializer['people'].value)
                 if booking_response is None:
                     return Response({"status": "booking not available", "data": "Booking not available for the selected datetime and selected number of people. Try changing number of people or datetime."},
@@ -50,7 +68,7 @@ class BookinngViewSet(viewsets.ModelViewSet):
                 return Response({"status": "error booking", "data": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            return Response({"status": "error booking", "data": e}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"status": "error booking", "data": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
         try:
@@ -62,7 +80,6 @@ class BookinngViewSet(viewsets.ModelViewSet):
 
 
 class RestaurantViewSet(viewsets.ModelViewSet):
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly, )
     """
     API endpoint that allows booking to be viewed/created/edited/deleted.
     """
@@ -96,13 +113,24 @@ class RestaurantViewSet(viewsets.ModelViewSet):
 
 
 class TableViewSet(viewsets.ModelViewSet):
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly, )
     """
     API endpoint that allows booking to be viewed/created/edited/deleted.
     """
     queryset = Table.objects.all().order_by('size')
     serializer_class = TableSerializer
     update_data_pk_field = 'id'
+
+    def get_permissions(self):
+        permission_classes = []
+        if self.action == 'create':
+            permission_classes = [IsAdminUser]
+        elif self.action == 'list':
+            permission_classes = [IsAdminUser]
+        elif self.action == 'retrieve' or self.action == 'update' or self.action == 'partial_update':
+            permission_classes = [IsAdminUser]
+        elif self.action == 'destroy':
+            permission_classes = [IsAdminUser]
+        return [permission() for permission in permission_classes]
 
     def create(self, request, *args, **kwargs):
         #if request.method == 'DELETE':

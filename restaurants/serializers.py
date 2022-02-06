@@ -7,13 +7,13 @@ from restaurants import booking
 
 class BookingSerializer(serializers.Serializer):
     restaurant = serializers.PrimaryKeyRelatedField(queryset=Restaurant.objects.all())
-    minutes_slot = serializers.IntegerField()
-    booking_date_time = serializers.DateTimeField()
+    booking_date_time_start = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S%z')
+    booking_date_time_end = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S%z')
     people = serializers.IntegerField()
 
     class Meta:
         model = Booking
-        fields = ['id','restaurant','minutes_slot', 'booking_date_time', 'people']
+        fields = ['id','restaurant','booking_date_time_start', 'booking_date_time_end', 'people']
         extra_kwargs = {'people': {'required': True}}
         ordering = ('id',)
 

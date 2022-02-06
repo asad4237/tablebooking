@@ -5,20 +5,33 @@ services:
     image: postgres
     volumes:
       - ./data/db:/var/lib/postgresql/data
+    ports:
+      - '5433:5432'
     environment:
       - POSTGRES_NAME=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+  redis:
+    container_name: 'redis'
+    image: redis
+    ports:
+      - '127.0.0.1:6379:6379'
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8877
+    #command: python manage.py runserver 0.0.0.0:8877
     volumes:
       - .:/code
     ports:
-      - "8877:8878"
+      - "8877:8877"
     environment:
+      - DB_HOST=db
       - POSTGRES_NAME=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - REDIS_LOCATION=redis://redis:6379/
+      - DJANGO_SUPERUSER_PASSWORD=12345678
+      - DJANGO_SUPERUSER_USERNAME=asad
+      - DJANGO_SUPERUSER_EMAIL=asad@domain.sa
     depends_on:
       - db
+      - redis

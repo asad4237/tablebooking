@@ -23,7 +23,7 @@ from rest_framework_simplejwt import views as jwt_views
 router = routers.DefaultRouter()
 #router.register(r'api', schema_view)
 router.register(r'booking', views.BookinngViewSet)
-router.register(r'restaurant', views.RestaurantViewSet)
+#router.register(r'restaurant', views.RestaurantViewSet)
 router.register(r'table', views.TableViewSet)
 
 

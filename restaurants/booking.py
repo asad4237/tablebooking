@@ -18,6 +18,21 @@ def book_restaurant_table(restaurant, booking_date_time, people, minutes_slot=90
     else:
         return None
 
+def book_restaurant_table(restaurant, booking_date_time, people, booking_date_time_end):
+    """
+    This method uses get_first_table_available to get the first table available, then it
+    creates a Booking on the database.
+    """
+    minutes_slot = (booking_date_time_end - booking_date_time).total_seconds() / 60.0
+    table = get_first_table_available(restaurant, booking_date_time, people, minutes_slot)
+
+    if table:
+        booking = Booking(table=table, people=people,
+            booking_date_time_start=booking_date_time, booking_date_time_end=booking_date_time_end)
+        booking.save()
+        return {'booking': booking.id, 'table': table.id}
+    else:
+        return None
 def get_first_table_available(restaurant, booking_date_time, people, minutes_slot=90):
     """
     This method returns the first available table of a restaurant, given a specific number of

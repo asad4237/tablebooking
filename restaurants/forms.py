@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 
 User = get_user_model()
 
@@ -13,20 +15,29 @@ class RegisterForm(forms.ModelForm):
 
     password = forms.CharField(widget=forms.PasswordInput)
     password_2 = forms.CharField(label='Confirm Password', widget=forms.PasswordInput)
-
+    staffnumber = forms.CharField(max_length=4, validators=[RegexValidator(regex=r'^\d{4}$', message='Staff number Length has to be exactly 4', code='nomatch')])
     class Meta:
         model = User
-        fields = ['email']
+        fields = ['staffnumber']
 
-    def clean_email(self):
-        '''
-        Verify email is available.
-        '''
-        email = self.cleaned_data.get('email')
-        qs = User.objects.filter(email=email)
-        if qs.exists():
-            raise forms.ValidationError("email is taken")
-        return email
+        def clean_staffnumber(self):
+            '''
+            Verify email is available.
+            '''
+            staffnumber = self.cleaned_data.get('staffnumber')
+            qs = User.objects.filter(staffnumber=staffnumber)
+            if qs.exists():
+                raise forms.ValidationError("staffnumber is taken")
+            return staffnumber
+#    def clean_email(self):
+#        '''
+#        Verify email is available.
+ #       '''
+ #       email = self.cleaned_data.get('email')
+ #       qs = User.objects.filter(email=email)
+ #       if qs.exists():
+ #           raise forms.ValidationError("email is taken")
+ #       return email
 
     def clean(self):
         '''
@@ -35,8 +46,10 @@ class RegisterForm(forms.ModelForm):
         cleaned_data = super().clean()
         password = cleaned_data.get("password")
         password_2 = cleaned_data.get("password_2")
+        if len(password) < 6:
+            raise ValidationError('Password length should be at-least 6 digit')
         if password is not None and password != password_2:
-            self.add_error("password_2", "Your passwords must match")
+            self.add_error("password_2", "Your passwords must match.")
         return cleaned_data
 
 
@@ -45,12 +58,14 @@ class UserAdminCreationForm(forms.ModelForm):
     A form for creating new users. Includes all the required
     fields, plus a repeated password.
     """
+    staffnumber = forms.CharField(max_length=4, validators=[
+        RegexValidator(regex=r'^\d{4}$', message='Staff number Length has to be exactly 4', code='nomatch')])
     password = forms.CharField(widget=forms.PasswordInput)
     password_2 = forms.CharField(label='Confirm Password', widget=forms.PasswordInput)
 
     class Meta:
         model = User
-        fields = ['email']
+        fields = ['staffnumber']
 
     def clean(self):
         '''
@@ -59,8 +74,10 @@ class UserAdminCreationForm(forms.ModelForm):
         cleaned_data = super().clean()
         password = cleaned_data.get("password")
         password_2 = cleaned_data.get("password_2")
+        if len(password) < 6:
+            raise ValidationError('Password length should be at-least 6 digit')
         if password is not None and password != password_2:
-            self.add_error("password_2", "Your passwords must match")
+            self.add_error("password_2", "Your passwords must match-")
         return cleaned_data
 
     def save(self, commit=True):
@@ -81,10 +98,14 @@ class UserAdminChangeForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['email', 'password', 'is_active', 'admin']
+        fields = ['password', 'staffnumber']
 
     def clean_password(self):
         # Regardless of what the user provides, return the initial value.
         # This is done here, rather than on the field, because the
         # field does not have access to the initial value
+        password = self.cleaned_data.get('password')
+
+        if len(password) < 6:
+            raise ValidationError('Password length should be at-least 6 digit')
         return self.initial["password"]
